@@ -12,6 +12,7 @@ from app.models.base import Base
 from app.models.user import User
 from app.models.knowledge import KnowledgeBase, Document
 from app.models.chat import Chat, Message
+from app.models.model_profile import ModelProfile
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

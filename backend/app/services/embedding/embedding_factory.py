@@ -38,4 +38,4 @@ class EmbeddingsFactory:
                 model_kwargs=model_kwargs
             )
         else:
-            raise ValueError(f"Unsupported embeddings provider: {embeddings_provider}")
+            raise ValueError(f"不支持的向量模型服务商：{embeddings_provider}")
