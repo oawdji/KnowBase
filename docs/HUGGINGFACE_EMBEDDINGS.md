@@ -1,6 +1,6 @@
 # HuggingFace Embeddings Support
 
-This document explains how to use HuggingFace embedding models with RAG Web UI.
+This document explains how to use HuggingFace embedding models with KnowBase.
 
 ## Configuration
 

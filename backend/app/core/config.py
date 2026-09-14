@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "RAG Web UI"  # Project name
+    PROJECT_NAME: str = "知库问答"  # Project name
     VERSION: str = "0.1.0"  # Project version
     API_V1_STR: str = "/api"  # API version string
 
@@ -33,6 +33,13 @@ class Settings(BaseSettings):
 
     # Chat Provider settings
     CHAT_PROVIDER: str = os.getenv("CHAT_PROVIDER", "openai")
+
+    # 对话标题自动生成
+    # 首条用户消息落库时，先用截断的问题文本作为标题（保证一定有名字），
+    # 若 CHAT_TITLE_LLM 为 true，再在后台调用模型生成更贴切的标题覆盖它。
+    CHAT_TITLE_LLM: bool = os.getenv("CHAT_TITLE_LLM", "true").lower() == "true"
+    CHAT_TITLE_MAX_LENGTH: int = int(os.getenv("CHAT_TITLE_MAX_LENGTH", "30"))
+    CHAT_TITLE_LLM_TIMEOUT: float = float(os.getenv("CHAT_TITLE_LLM_TIMEOUT", "15"))
 
     # Embeddings settings
     EMBEDDINGS_PROVIDER: str = os.getenv("EMBEDDINGS_PROVIDER", "openai")

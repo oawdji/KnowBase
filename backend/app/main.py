@@ -34,7 +34,7 @@ async def startup_event():
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to RAG Web UI API"}
+    return {"message": "欢迎使用知库问答 API"}
 
 
 @app.get("/api/health")

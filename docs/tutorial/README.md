@@ -335,7 +335,7 @@ flowchart TD
    - 可以根据场景微调
    - 计算效率高
 
-在 RAG Web UI 中，主要是用的 OpenAI 的 text-embedding-ada-002 模型。
+在知库问答中，主要是用的 OpenAI 的 text-embedding-ada-002 模型。
 
 ```python
 from langchain_openai import OpenAIEmbeddings
@@ -351,7 +351,7 @@ embeddings = OpenAIEmbeddings(
 
 在文本 Embedding 之后，需要将向量存储到向量数据库中，以便后续的检索和相似度计算。
 
-在 RAG Web UI 中，主要是用的 ChromaDB 作为向量数据库， 同时支持使用 Factory 模式， 支持多种向量数据库，例如：
+在知库问答中，主要是用的 ChromaDB 作为向量数据库， 同时支持使用 Factory 模式， 支持多种向量数据库，例如：
 
 1. ChromaDB
 2. Qdrant
@@ -469,7 +469,7 @@ ChromaDB 默认使用 Cosine Similarity，这也是最常用的相似度计算�
 
 ![引用信息](../images/screenshot4.png)
 
-在 RAG Web UI 中， 我们使用 LangChain 的模板来实现这个功能：
+在知库问答中， 我们使用 LangChain 的模板来实现这个功能：
 
 可查阅： `backend/app/services/chat_service.py`
 

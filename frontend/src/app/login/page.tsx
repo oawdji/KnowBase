@@ -41,7 +41,7 @@ export default function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Login failed");
+        setError("登录失败，请检查用户名和密码后重试");
       }
     } finally {
       setLoading(false);
@@ -54,10 +54,10 @@ export default function LoginPage() {
         <div className="bg-white rounded-lg shadow-md p-8 space-y-6">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome To RAG Web UI
+              欢迎使用知库问答
             </h1>
             <p className="mt-2 text-sm text-gray-600">
-              Please sign in to continue
+              请登录以继续
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
                   htmlFor="username"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Username
+                  用户名
                 </label>
                 <input
                   id="username"
@@ -77,7 +77,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your username"
+                  placeholder="请输入用户名"
                 />
               </div>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
                   htmlFor="password"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Password
+                  密码
                 </label>
                 <input
                   id="password"
@@ -95,7 +95,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your password"
+                  placeholder="请输入密码"
                 />
               </div>
             </div>
@@ -111,7 +111,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "登录中…" : "登录"}
             </button>
           </form>
 
@@ -120,7 +120,7 @@ export default function LoginPage() {
               href="/register"
               className="text-sm font-medium text-gray-600 hover:text-gray-500"
             >
-              Don't have an account? Create one now
+              还没有账号？立即注册
             </Link>
           </div>
         </div>
