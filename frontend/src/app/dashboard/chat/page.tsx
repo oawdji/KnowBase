@@ -9,11 +9,15 @@ import { useToast } from "@/components/ui/use-toast";
 
 interface Chat {
   id: number;
-  title: string;
+  /** null 表示尚未命名（发出第一条消息后后端会自动命名） */
+  title: string | null;
   created_at: string;
   messages: Message[];
   knowledge_base_ids: number[];
 }
+
+/** 未命名对话的显示名，与后端保持一致 */
+const PLACEHOLDER_TITLE = "新对话";
 
 interface Message {
   id: number;
@@ -39,7 +43,7 @@ export default function ChatPage() {
       console.error("Failed to fetch chats:", error);
       if (error instanceof ApiError) {
         toast({
-          title: "Error",
+          title: "出错了",
           description: error.message,
           variant: "destructive",
         });
@@ -48,19 +52,19 @@ export default function ChatPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this chat?")) return;
+    if (!confirm("确定要删除这个对话吗？")) return;
     try {
       await api.delete(`/api/chat/${id}`);
       setChats((prev) => prev.filter((chat) => chat.id !== id));
       toast({
-        title: "Success",
-        description: "Chat deleted successfully",
+        title: "操作成功",
+        description: "对话已删除",
       });
     } catch (error) {
       console.error("Failed to delete chat:", error);
       if (error instanceof ApiError) {
         toast({
-          title: "Error",
+          title: "出错了",
           description: error.message,
           variant: "destructive",
         });
@@ -69,7 +73,9 @@ export default function ChatPage() {
   };
 
   const filteredChats = chats.filter((chat) =>
-    chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+    (chat.title ?? PLACEHOLDER_TITLE)
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -79,10 +85,10 @@ export default function ChatPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Your Conversations
+                我的对话
               </h2>
               <p className="text-muted-foreground mt-1">
-                Explore and manage your chat history
+                浏览和管理你的对话记录
               </p>
             </div>
             <Link
@@ -90,7 +96,7 @@ export default function ChatPage() {
               className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors duration-200 shadow-sm hover:shadow-md"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Start New Chat
+              新建对话
             </Link>
           </div>
 
@@ -99,7 +105,7 @@ export default function ChatPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder="搜索对话…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-full border bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
@@ -122,10 +128,10 @@ export default function ChatPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg truncate group-hover:text-primary transition-colors">
-                        {chat.title}
+                        {chat.title ?? PLACEHOLDER_TITLE}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {chat.messages.length} messages •{" "}
+                        {chat.messages.length} 条消息 •{" "}
                         {new Date(chat.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -160,17 +166,17 @@ export default function ChatPage() {
           <div className="text-center py-16 bg-card rounded-lg border">
             <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-medium text-foreground">
-              No conversations yet
+              暂无对话
             </h3>
             <p className="mt-2 text-muted-foreground">
-              Start a new chat to begin exploring your knowledge base
+              新建对话，开始探索你的知识库
             </p>
             <Link
               href="/dashboard/chat/new"
               className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors duration-200"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Start Your First Chat
+              开始第一个对话
             </Link>
           </div>
         )}

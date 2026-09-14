@@ -66,8 +66,8 @@ export default function APIKeysPage() {
       setApiKeys(data);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to fetch API keys",
+        title: "出错了",
+        description: "获取 API 密钥列表失败",
         variant: "destructive",
       });
     } finally {
@@ -83,8 +83,8 @@ export default function APIKeysPage() {
   const createAPIKey = async () => {
     if (!newKeyName.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a name for the API key",
+        title: "出错了",
+        description: "请输入 API 密钥名称",
         variant: "destructive",
       });
       return;
@@ -101,13 +101,13 @@ export default function APIKeysPage() {
       setNewKeyName("");
       setIsDialogOpen(false);
       toast({
-        title: "Success",
-        description: "API key created successfully",
+        title: "操作成功",
+        description: "API 密钥创建成功",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create API key",
+        title: "出错了",
+        description: "创建 API 密钥失败",
         variant: "destructive",
       });
     } finally {
@@ -120,17 +120,17 @@ export default function APIKeysPage() {
     try {
       const response = await api.delete(`/api/api-keys/${id}`);
 
-      if (!response.ok) throw new Error("Failed to delete API key");
+      if (!response.ok) throw new Error("删除 API 密钥失败");
 
       setApiKeys(apiKeys.filter((key) => key.id !== id));
       toast({
-        title: "Success",
-        description: "API key deleted successfully",
+        title: "操作成功",
+        description: "API 密钥删除成功",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to delete API key",
+        title: "出错了",
+        description: "删除 API 密钥失败",
         variant: "destructive",
       });
     }
@@ -150,13 +150,13 @@ export default function APIKeysPage() {
       );
 
       toast({
-        title: "Success",
-        description: "API key status updated successfully",
+        title: "操作成功",
+        description: "API 密钥状态更新成功",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update API key",
+        title: "出错了",
+        description: "更新 API 密钥失败",
         variant: "destructive",
       });
     }
@@ -171,13 +171,13 @@ export default function APIKeysPage() {
         setCopiedId(null);
       }, 3000);
       toast({
-        title: "Success",
-        description: "API key copied to clipboard",
+        title: "操作成功",
+        description: "API 密钥已复制到剪贴板",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to copy API key",
+        title: "出错了",
+        description: "复制 API 密钥失败",
         variant: "destructive",
       });
     }
@@ -187,7 +187,7 @@ export default function APIKeysPage() {
     <DashboardLayout>
       <div className="container mx-auto py-10">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">API Keys</h1>
+          <h1 className="text-2xl font-bold">API 密钥</h1>
           <div className="flex gap-4">
             <Dialog
               open={isAPIListDialogOpen}
@@ -196,25 +196,25 @@ export default function APIKeysPage() {
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <List className="mr-2 h-4 w-4" />
-                  API List
+                  密钥列表
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Available API Endpoints</DialogTitle>
+                  <DialogTitle>可用接口</DialogTitle>
                   <DialogDescription>
-                    List of available API endpoints and their usage.
+                    可用接口列表及其用法说明。
                   </DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 space-y-6">
                   <div className="border rounded-lg p-6 bg-slate-50">
                     <h3 className="text-lg font-semibold mb-4">
-                      Knowledge Base Query
+                      知识库检索
                     </h3>
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-medium text-slate-700 mb-2">
-                          Method
+                          请求方法
                         </h4>
                         <code className="block p-3 bg-white border rounded-md text-sm font-mono text-blue-600">
                           GET
@@ -223,7 +223,7 @@ export default function APIKeysPage() {
 
                       <div>
                         <h4 className="text-sm font-medium text-slate-700 mb-2">
-                          Endpoint
+                          接口地址
                         </h4>
                         <code className="block p-3 bg-white border rounded-md text-sm font-mono">
                           /openapi/knowledge/{"{id}"}/query
@@ -232,19 +232,19 @@ export default function APIKeysPage() {
 
                       <div>
                         <h4 className="text-sm font-medium text-slate-700 mb-2">
-                          Query Parameters
+                          请求参数
                         </h4>
                         <div className="bg-white border rounded-md p-3 space-y-2">
                           <div className="grid grid-cols-3 text-sm">
                             <div className="font-mono text-blue-600">query</div>
                             <div className="col-span-2">
-                              Your search query string
+                              您的搜索查询内容
                             </div>
                           </div>
                           <div className="grid grid-cols-3 text-sm">
                             <div className="font-mono text-blue-600">top_k</div>
                             <div className="col-span-2">
-                              Number of results to return (optional, default: 3)
+                              返回结果数量（可选，默认 3）
                             </div>
                           </div>
                         </div>
@@ -252,7 +252,7 @@ export default function APIKeysPage() {
 
                       <div>
                         <h4 className="text-sm font-medium text-slate-700 mb-2">
-                          Headers
+                          请求头
                         </h4>
                         <div className="bg-white border rounded-md p-3 grid grid-cols-3 text-sm">
                           <div className="font-mono text-blue-600">
@@ -271,24 +271,24 @@ export default function APIKeysPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create API Key
+                  新建 API 密钥
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New API Key</DialogTitle>
+                  <DialogTitle>新建 API 密钥</DialogTitle>
                   <DialogDescription>
-                    Create a new API key to access the API programmatically.
+                    创建新的 API 密钥，以便通过程序调用接口。
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">名称</Label>
                     <Input
                       id="name"
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
-                      placeholder="Enter API key name"
+                      placeholder="请输入 API 密钥名称"
                     />
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export default function APIKeysPage() {
                     onClick={createAPIKey}
                     disabled={isCreating || !newKeyName.trim()}
                   >
-                    {isCreating ? "Creating..." : "Create"}
+                    {isCreating ? "创建中…" : "创建"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -309,12 +309,12 @@ export default function APIKeysPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>API Key</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last Used</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>名称</TableHead>
+                <TableHead>API 密钥</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>创建时间</TableHead>
+                <TableHead>最近使用</TableHead>
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -351,7 +351,7 @@ export default function APIKeysPage() {
                   <TableCell>
                     {apiKey.last_used_at
                       ? new Date(apiKey.last_used_at).toLocaleDateString()
-                      : "Never"}
+                      : "从未使用"}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -359,7 +359,7 @@ export default function APIKeysPage() {
                       size="sm"
                       onClick={() => deleteAPIKey(apiKey.id)}
                     >
-                      Delete
+                      删除
                     </Button>
                   </TableCell>
                 </TableRow>

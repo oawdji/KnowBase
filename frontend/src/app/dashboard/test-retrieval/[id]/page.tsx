@@ -41,7 +41,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
         console.error("Failed to fetch knowledge base:", error);
         if (error instanceof ApiError) {
           toast({
-            title: "Error",
+            title: "出错了",
             description: error.message,
             variant: "destructive",
           });
@@ -55,8 +55,8 @@ export default function TestPage({ params }: { params: { id: string } }) {
   const handleTest = async () => {
     if (!query) {
       toast({
-        title: "Please fill in all fields",
-        description: "Please enter query text",
+        title: "请填写所有字段",
+        description: "请输入查询内容",
         variant: "destructive",
       });
       return;
@@ -111,7 +111,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
                     <Search className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <Input
-                    placeholder="输入您想要查询的内容..."
+                    placeholder="请输入查询内容…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="pl-12 h-14 text-lg bg-background/50 border-primary/20 focus:border-primary"
@@ -127,7 +127,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
                     {loading ? (
                       <span className="flex items-center">
                         <Sparkles className="animate-spin mr-2 h-4 w-4" />
-                        搜索中...
+                        搜索中…
                       </span>
                     ) : (
                       <span className="flex items-center">
@@ -143,10 +143,10 @@ export default function TestPage({ params }: { params: { id: string } }) {
                     <SelectValue placeholder="返回数量" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Top 1</SelectItem>
-                    <SelectItem value="3">Top 3</SelectItem>
-                    <SelectItem value="5">Top 5</SelectItem>
-                    <SelectItem value="10">Top 10</SelectItem>
+                    <SelectItem value="1">前 1 条</SelectItem>
+                    <SelectItem value="3">前 3 条</SelectItem>
+                    <SelectItem value="5">前 5 条</SelectItem>
+                    <SelectItem value="10">前 10 条</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -169,11 +169,11 @@ export default function TestPage({ params }: { params: { id: string } }) {
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
                           <span className="px-4 py-2 rounded-full bg-primary/10 text-primary font-medium">
-                            相关度: {(result.score * 100).toFixed(2)}%
+                            相关度：{(result.score * 100).toFixed(2)}%
                           </span>
                           <span className="text-sm text-muted-foreground flex items-center gap-2">
                             <Search className="h-4 w-4" />
-                            来源: {result.metadata.source}
+                            来源：{result.metadata.source}
                           </span>
                         </div>
                       </div>

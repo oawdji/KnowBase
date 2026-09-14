@@ -104,7 +104,7 @@ def get_knowledge_base(
     )
 
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
     
     return kb
 
@@ -125,7 +125,7 @@ def update_knowledge_base(
     ).first()
     
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
 
     for field, value in kb_in.dict(exclude_unset=True).items():
         setattr(kb, field, value)
@@ -157,7 +157,7 @@ async def delete_knowledge_base(
         .first()
     )
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
     
     try:
         # Get all document file paths before deletion
@@ -210,7 +210,7 @@ async def delete_knowledge_base(
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to delete knowledge base {kb_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete knowledge base: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"删除知识库失败：{str(e)}")
 
 # Batch upload documents
 @router.post("/{kb_id}/documents/upload")
@@ -228,7 +228,7 @@ async def upload_kb_documents(
         KnowledgeBase.user_id == current_user.id
     ).first()
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
     
     results = []
     for file in files:
@@ -269,7 +269,7 @@ async def upload_kb_documents(
             )
         except MinioException as e:
             logger.error(f"Failed to upload file to MinIO: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to upload file")
+            raise HTTPException(status_code=500, detail="文件上传失败")
         
         # 4. 创建上传记录
         upload = DocumentUpload(
@@ -322,7 +322,7 @@ async def preview_kb_documents(
             ).first()
             
             if not upload:
-                raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
+                raise HTTPException(status_code=404, detail=f"文档 {doc_id} 不存在")
             
             file_path = upload.temp_path
         
@@ -354,7 +354,7 @@ async def process_kb_documents(
     ).first()
     
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
     
     task_info = []
     upload_ids = []
@@ -373,7 +373,7 @@ async def process_kb_documents(
     ).all()
     uploads_dict = {upload.id: upload for upload in uploads}
     if len(uploads_dict) != len(set(upload_ids)):
-        raise HTTPException(status_code=400, detail="One or more upload IDs are invalid")
+        raise HTTPException(status_code=400, detail="存在无效的上传 ID")
     
     all_tasks = []
     for upload_id in upload_ids:
@@ -482,7 +482,7 @@ async def get_processing_tasks(
     ).first()
     
     if not kb:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="知识库不存在")
         
     tasks = (
         db.query(ProcessingTask)
@@ -530,7 +530,7 @@ async def get_document(
     )
 
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="文档不存在")
     
     return document
 
@@ -553,7 +553,7 @@ async def test_retrieval(
         if not kb:
             raise HTTPException(
                 status_code=404,
-                detail=f"Knowledge base {request.kb_id} not found",
+                detail=f"知识库 {request.kb_id} 不存在",
             )
         
         embeddings = EmbeddingsFactory.create()
@@ -576,5 +576,8 @@ async def test_retrieval(
             
         return {"results": response}
         
+    except HTTPException:
+        # 保留上面抛出的 404 等业务异常，避免被下面的兜底吞成 500
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"检索失败：{str(e)}")

@@ -113,8 +113,8 @@ export default function UploadPage({ params }: { params: { id: string } }) {
       );
 
       toast({
-        title: "Success",
-        description: result.message || "File uploaded successfully",
+        title: "上传成功",
+        description: result.message || "文件上传成功。",
       });
     } catch (error) {
       console.error("Failed to upload file:", error);
@@ -125,7 +125,7 @@ export default function UploadPage({ params }: { params: { id: string } }) {
                 ...f,
                 status: "error",
                 error:
-                  error instanceof ApiError ? error.message : "Upload failed",
+                  error instanceof ApiError ? error.message : "上传失败",
               }
             : f
         )
@@ -171,8 +171,8 @@ export default function UploadPage({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error("Failed to start processing:", error);
       toast({
-        title: "Error",
-        description: "Failed to start processing files",
+        title: "错误",
+        description: "启动文件处理失败，请稍后重试。",
         variant: "destructive",
       });
     }
@@ -216,8 +216,8 @@ export default function UploadPage({ params }: { params: { id: string } }) {
         setIsProcessing(false);
         setShowSuccessModal(true);
         toast({
-          title: "Success",
-          description: "All files have been processed successfully",
+          title: "处理完成",
+          description: "所有文件已处理完成。",
           duration: Infinity,
         });
       }
@@ -252,10 +252,10 @@ export default function UploadPage({ params }: { params: { id: string } }) {
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            Upload Documents
+            上传文档
           </h2>
           <p className="text-muted-foreground">
-            Upload documents to your knowledge base
+            将文档上传到你的知识库
           </p>
         </div>
 
@@ -270,23 +270,23 @@ export default function UploadPage({ params }: { params: { id: string } }) {
           <input {...getInputProps()} />
           <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
           <p className="mt-4 text-sm text-muted-foreground">
-            Drag and drop files here, or click to select files
+            将文件拖到此处，或点击选择文件
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Supported formats: PDF, DOCX, TXT, MD
+            支持格式：PDF、DOCX、TXT、MD
           </p>
         </div>
 
         {files.length > 0 && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Files</h3>
+              <h3 className="text-lg font-semibold">文件</h3>
               {hasUploadedFiles && !isProcessing && (
                 <button
                   onClick={startProcessing}
                   className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                 >
-                  Start Processing
+                  开始处理
                 </button>
               )}
             </div>
@@ -312,7 +312,7 @@ export default function UploadPage({ params }: { params: { id: string } }) {
                       <div className="flex items-center space-x-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-muted-foreground">
-                          Uploading...
+                          上传中…
                         </span>
                       </div>
                     )}
@@ -320,7 +320,7 @@ export default function UploadPage({ params }: { params: { id: string } }) {
                       <div className="flex items-center space-x-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-muted-foreground">
-                          Processing...
+                          处理中…
                         </span>
                       </div>
                     )}
@@ -352,14 +352,14 @@ export default function UploadPage({ params }: { params: { id: string } }) {
               onClick={() => router.push(`/dashboard/knowledge/${params.id}`)}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
             >
-              Done
+              完成
             </button>
           ) : (
             <button
               onClick={() => router.push(`/dashboard/knowledge/${params.id}`)}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
             >
-              Cancel
+              取消
             </button>
           )}
         </div>

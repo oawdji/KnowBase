@@ -35,7 +35,7 @@ def get_current_user(
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="登录凭证无效，请重新登录",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -52,7 +52,7 @@ def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user",
+            detail="账号已被禁用",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user 
@@ -64,20 +64,20 @@ def get_api_key_user(
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key header missing",
+            detail="请求头缺少 API 密钥（X-API-Key）",
         )
     
     api_key_obj = APIKeyService.get_api_key_by_key(db=db, key=api_key)
     if not api_key_obj:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key",
+            detail="API 密钥无效",
         )
     
     if not api_key_obj.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive API key",
+            detail="API 密钥已禁用",
         )
     
     APIKeyService.update_last_used(db=db, api_key=api_key_obj)

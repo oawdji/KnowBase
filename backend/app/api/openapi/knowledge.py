@@ -33,7 +33,7 @@ def query_knowledge_base(
         if not kb:
             raise HTTPException(
                 status_code=404,
-                detail=f"Knowledge base {knowledge_base_id} not found",
+                detail=f"知识库 {knowledge_base_id} 不存在",
             )
         
         embeddings = EmbeddingsFactory.create()
@@ -56,5 +56,8 @@ def query_knowledge_base(
             
         return {"results": response}
         
+    except HTTPException:
+        # 保留上面抛出的 404 等业务异常，避免被下面的兜底吞成 500
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"检索失败：{str(e)}")

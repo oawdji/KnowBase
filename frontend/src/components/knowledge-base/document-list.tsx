@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { api, ApiError } from "@/lib/api";
 import { FileIcon, defaultStyles } from "react-file-icon";
 import {
@@ -54,7 +55,7 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
         if (error instanceof ApiError) {
           setError(error.message);
         } else {
-          setError("Failed to fetch documents");
+          setError("获取文档列表失败，请刷新页面重试。");
         }
       } finally {
         setLoading(false);
@@ -70,7 +71,7 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
         <div className="space-y-4">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground animate-pulse">
-            Loading documents...
+            加载中…
           </p>
         </div>
       </div>
@@ -93,9 +94,9 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
             <FileText className="w-10 h-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold">No documents yet</h3>
+            <h3 className="text-xl font-semibold">暂无文档</h3>
             <p className="text-muted-foreground">
-              Upload your first document to start building your knowledge base.
+              上传第一个文档，开始构建你的知识库。
             </p>
           </div>
         </div>
@@ -107,10 +108,10 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Size</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>名称</TableHead>
+          <TableHead>大小</TableHead>
+          <TableHead>创建时间</TableHead>
+          <TableHead>状态</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -142,6 +143,7 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
             <TableCell>
               {formatDistanceToNow(new Date(doc.created_at), {
                 addSuffix: true,
+                locale: zhCN,
               })}
             </TableCell>
             <TableCell>
@@ -155,7 +157,13 @@ export function DocumentList({ knowledgeBaseId }: DocumentListProps) {
                       : "default" // Default for pending/processing
                   }
                 >
-                  {doc.processing_tasks[0].status}
+                  {doc.processing_tasks[0].status === "completed"
+                    ? "已完成"
+                    : doc.processing_tasks[0].status === "failed"
+                    ? "失败"
+                    : doc.processing_tasks[0].status === "processing"
+                    ? "处理中"
+                    : "待处理"}
                 </Badge>
               )}
             </TableCell>

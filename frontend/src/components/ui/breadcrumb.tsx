@@ -4,6 +4,22 @@ import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// 路径段 → 中文标签；未收录的段回退为原文（把 - 换成空格）
+const SEGMENT_LABELS: Record<string, string> = {
+  dashboard: "概览",
+  knowledge: "知识库",
+  chat: "对话",
+  "api-keys": "API 密钥",
+  settings: "模型设置",
+  "test-retrieval": "检索测试",
+  new: "新建",
+  upload: "上传文档",
+};
+
+// 动态路由的实际取值（如 /dashboard/chat/3 里的 3）统一显示为「详情」
+const DETAIL_LABEL = "详情";
+const DYNAMIC_SEGMENT = /^\d+$/;
+
 const Breadcrumb = () => {
   const pathname = usePathname();
 
@@ -11,16 +27,15 @@ const Breadcrumb = () => {
     const paths = pathname.split("/").filter(Boolean);
     const breadcrumbs = paths.map((path, index) => {
       const href = "/" + paths.slice(0, index + 1).join("/");
-      const label =
-        path.charAt(0).toUpperCase() + path.slice(1).replace(/-/g, " ");
       const isLast = index === paths.length - 1;
 
-      // Handle dynamic routes with [id]
-      const displayLabel = path.match(/^\[.*\]$/) ? "Details" : label;
+      const label =
+        SEGMENT_LABELS[path] ??
+        (DYNAMIC_SEGMENT.test(path) ? DETAIL_LABEL : path.replace(/-/g, " "));
 
       return {
         href,
-        label: displayLabel,
+        label,
         isLast,
       };
     });

@@ -41,12 +41,12 @@ export default function NewKnowledgeBasePage() {
       if (error instanceof ApiError) {
         setError(error.message);
         toast({
-          title: "Error",
+          title: "错误",
           description: error.message,
           variant: "destructive",
         });
       } else {
-        setError("Failed to create knowledge base");
+        setError("创建知识库失败，请稍后重试。");
       }
     } finally {
       setIsSubmitting(false);
@@ -58,10 +58,10 @@ export default function NewKnowledgeBasePage() {
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            Create Knowledge Base
+            新建知识库
           </h2>
           <p className="text-muted-foreground">
-            Create a new knowledge base to store your documents
+            创建一个新的知识库来存放你的文档
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function NewKnowledgeBasePage() {
               htmlFor="name"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Name
+              名称
             </label>
             <input
               id="name"
@@ -79,7 +79,7 @@ export default function NewKnowledgeBasePage() {
               type="text"
               required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="Enter knowledge base name"
+              placeholder="请输入知识库名称"
             />
           </div>
 
@@ -88,13 +88,13 @@ export default function NewKnowledgeBasePage() {
               htmlFor="description"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Description
+              描述
             </label>
             <textarea
               id="description"
               name="description"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="Enter knowledge base description"
+              placeholder="请输入知识库描述"
             />
           </div>
 
@@ -106,14 +106,14 @@ export default function NewKnowledgeBasePage() {
               onClick={() => router.back()}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
             >
-              Cancel
+              取消
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
             >
-              {isSubmitting ? "Creating..." : "Create"}
+              {isSubmitting ? "创建中…" : "创建"}
             </button>
           </div>
         </form>

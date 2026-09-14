@@ -181,14 +181,14 @@ export function DocumentUploadSteps({
       // 移除自动处理的逻辑，只更新步骤
       setCurrentStep(2);
       toast({
-        title: "Upload successful",
-        description: `${data.length} files uploaded successfully.`,
+        title: "上传成功",
+        description: `已成功上传 ${data.length} 个文件。`,
       });
     } catch (error) {
       toast({
-        title: "Upload failed",
+        title: "上传失败",
         description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+          error instanceof ApiError ? error.message : "出现错误，请稍后重试。",
         variant: "destructive",
       });
     } finally {
@@ -218,14 +218,14 @@ export function DocumentUploadSteps({
       setUploadedDocuments(data);
 
       toast({
-        title: "Preview generated",
-        description: "Document preview generated successfully.",
+        title: "预览已生成",
+        description: "文档预览生成成功。",
       });
     } catch (error) {
       toast({
-        title: "Preview failed",
+        title: "预览失败",
         description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+          error instanceof ApiError ? error.message : "出现错误，请稍后重试。",
         variant: "destructive",
       });
     } finally {
@@ -274,9 +274,9 @@ export function DocumentUploadSteps({
     } catch (error) {
       setIsLoading(false);
       toast({
-        title: "Processing failed",
+        title: "处理失败",
         description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+          error instanceof ApiError ? error.message : "出现错误，请稍后重试。",
         variant: "destructive",
       });
     }
@@ -315,14 +315,14 @@ export function DocumentUploadSteps({
           );
           if (!hasErrors) {
             toast({
-              title: "Processing completed",
-              description: "All documents have been processed successfully.",
+              title: "处理完成",
+              description: "所有文档已处理完成。",
             });
             onComplete?.();
           } else {
             toast({
-              title: "Processing completed with errors",
-              description: "Some documents failed to process.",
+              title: "处理完成但存在错误",
+              description: "部分文档处理失败。",
               variant: "destructive",
             });
           }
@@ -333,9 +333,9 @@ export function DocumentUploadSteps({
       } catch (error) {
         setIsLoading(false);
         toast({
-          title: "Status check failed",
+          title: "状态检查失败",
           description:
-            error instanceof ApiError ? error.message : "Something went wrong",
+            error instanceof ApiError ? error.message : "出现错误，请稍后重试。",
           variant: "destructive",
         });
       }
@@ -354,9 +354,9 @@ export function DocumentUploadSteps({
       <div className="mb-8">
         <div className="flex justify-between mb-2">
           {[
-            { step: 1, icon: Upload, label: "Upload" },
-            { step: 2, icon: FileText, label: "Preview" },
-            { step: 3, icon: Settings, label: "Process" },
+            { step: 1, icon: Upload, label: "上传" },
+            { step: 2, icon: FileText, label: "预览" },
+            { step: 3, icon: Settings, label: "处理" },
           ].map(({ step, icon: Icon, label }, index, array) => (
             <div
               key={step}
@@ -406,10 +406,10 @@ export function DocumentUploadSteps({
                 <input {...getInputProps()} />
                 <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
                 <p className="mt-2 text-sm font-medium">
-                  Drop your files here or click to browse
+                  将文件拖到此处，或点击浏览
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Supports PDF, DOCX, TXT, and MD files
+                  支持 PDF、DOCX、TXT、MD 文件
                 </p>
               </div>
               {files.length > 0 && (
@@ -442,7 +442,7 @@ export function DocumentUploadSteps({
                       <div className="flex items-center space-x-2">
                         {fileStatus.status === "uploaded" && (
                           <span className="text-green-500 text-sm">
-                            Uploaded
+                            已上传
                           </span>
                         )}
                         {fileStatus.status === "error" && (
@@ -470,7 +470,7 @@ export function DocumentUploadSteps({
                 className="w-full"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Upload Files
+                上传文件
               </Button>
             </div>
           </Card>
@@ -480,7 +480,7 @@ export function DocumentUploadSteps({
           <Card className="p-6">
             <div className="space-y-6">
               <h3 className="text-lg font-medium">
-                Select Document to Preview
+                选择要预览的文档
               </h3>
               <div className="flex items-center space-x-4">
                 <Select
@@ -490,7 +490,7 @@ export function DocumentUploadSteps({
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a document to preview" />
+                    <SelectValue placeholder="选择要预览的文档" />
                   </SelectTrigger>
                   <SelectContent>
                     {files
@@ -509,11 +509,11 @@ export function DocumentUploadSteps({
 
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="settings">
-                  <AccordionTrigger>Advanced Settings</AccordionTrigger>
+                  <AccordionTrigger>高级设置</AccordionTrigger>
                   <AccordionContent>
                     <div className="grid gap-4 md:grid-cols-2 pt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="chunk-size">Chunk Size (tokens)</Label>
+                        <Label htmlFor="chunk-size">分块大小（Token）</Label>
                         <Input
                           id="chunk-size"
                           type="number"
@@ -525,7 +525,7 @@ export function DocumentUploadSteps({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="chunk-overlap">
-                          Chunk Overlap (tokens)
+                          分块重叠（Token）
                         </Label>
                         <Input
                           id="chunk-overlap"
@@ -550,14 +550,14 @@ export function DocumentUploadSteps({
                   {isLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Preview Chunks
+                  预览分块
                 </Button>
                 <Button
                   onClick={() => setCurrentStep(3)}
                   variant="secondary"
                   className="flex-1"
                 >
-                  Continue
+                  继续
                 </Button>
               </div>
 
@@ -573,7 +573,7 @@ export function DocumentUploadSteps({
                       </h3>
                       <span className="text-sm text-muted-foreground">
                         {uploadedDocuments[selectedDocumentId].chunks.length}{" "}
-                        chunks
+                        个分块
                       </span>
                     </div>
                     <div className="h-[400px] overflow-y-auto space-y-2 rounded-lg border p-4">
@@ -584,7 +584,7 @@ export function DocumentUploadSteps({
                             className="p-4 bg-muted rounded-lg space-y-2"
                           >
                             <div className="text-sm text-muted-foreground">
-                              Chunk {index + 1}
+                              分块 {index + 1}
                             </div>
                             <pre className="whitespace-pre-wrap text-sm">
                               {chunk.content}
@@ -635,7 +635,14 @@ export function DocumentUploadSteps({
                               </p>
                               {task && (
                                 <p className="text-xs text-muted-foreground">
-                                  Status: {task.status || "pending"}
+                                  状态：
+                                  {task.status === "completed"
+                                    ? "已完成"
+                                    : task.status === "failed"
+                                    ? "失败"
+                                    : task.status === "processing"
+                                    ? "处理中"
+                                    : "待处理"}
                                 </p>
                               )}
                             </div>
@@ -670,12 +677,12 @@ export function DocumentUploadSteps({
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    处理中…
                   </>
                 ) : (
                   <>
                     <Settings className="mr-2 h-4 w-4" />
-                    Process
+                    处理
                   </>
                 )}
               </Button>

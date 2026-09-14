@@ -55,9 +55,9 @@ def update_api_key(
     """
     api_key = APIKeyService.get_api_key(db=db, api_key_id=id)
     if not api_key:
-        raise HTTPException(status_code=404, detail="API key not found")
+        raise HTTPException(status_code=404, detail="API 密钥不存在")
     if api_key.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise HTTPException(status_code=403, detail="权限不足")
     
     api_key = APIKeyService.update_api_key(db=db, api_key=api_key, update_data=api_key_in)
     logger.info(f"API key updated: {api_key.key} for user {current_user.id}")
@@ -75,9 +75,9 @@ def delete_api_key(
     """
     api_key = APIKeyService.get_api_key(db=db, api_key_id=id)
     if not api_key:
-        raise HTTPException(status_code=404, detail="API key not found")
+        raise HTTPException(status_code=404, detail="API 密钥不存在")
     if api_key.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise HTTPException(status_code=403, detail="权限不足")
     
     APIKeyService.delete_api_key(db=db, api_key=api_key)
     logger.info(f"API key deleted: {api_key.key} for user {current_user.id}")

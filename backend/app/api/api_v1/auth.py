@@ -26,7 +26,7 @@ def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
         if user:
             raise HTTPException(
                 status_code=400,
-                detail="A user with this email already exists.",
+                detail="该邮箱已被注册。",
             )
         
         # Check if user with this username exists
@@ -34,7 +34,7 @@ def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
         if user:
             raise HTTPException(
                 status_code=400,
-                detail="A user with this username already exists.",
+                detail="该用户名已被占用。",
             )
         
         # Create new user
@@ -50,7 +50,7 @@ def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
     except RequestException as e:
         raise HTTPException(
             status_code=503,
-            detail="Network error or server is unreachable. Please try again later.",
+            detail="网络异常或服务暂时不可用，请稍后重试。",
         ) from e
 
 @router.post("/token", response_model=Token)
@@ -64,13 +64,13 @@ def login_access_token(
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
     elif not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user",
+            detail="账号已被禁用",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
