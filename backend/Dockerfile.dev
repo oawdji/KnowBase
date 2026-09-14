@@ -2,8 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 可选：国内网络下通过 build args 切换 Debian / PyPI 镜像源，默认仍走官方源
+ARG APT_MIRROR=
+ARG PIP_INDEX_URL=https://pypi.org/simple
+
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN if [ -n "$APT_MIRROR" ]; then \
+    sed -i "s|http://deb.debian.org|https://$APT_MIRROR|g; s|http://security.debian.org|https://$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources; \
+  fi \
+  && apt-get update \
+  && apt-get install -y -o Acquire::Retries=5 \
   build-essential \
   default-libmysqlclient-dev \
   pkg-config \
@@ -14,7 +22,16 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements file
 COPY requirements.txt .
 
-# Install Python packages with retry mechanism
+# 可选：先从 PyTorch CPU 源安装 torch。
+# PyPI 上 Linux/arm64 的 torch 会把整套 NVIDIA CUDA 依赖一起拉下来（4-6GB），
+# 无 GPU 环境下没有意义；先装 CPU 版后，requirements 中的 torch 依赖即已满足。
+ARG TORCH_CPU_INDEX_URL=
+RUN if [ -n "$TORCH_CPU_INDEX_URL" ]; then \
+    pip install --no-cache-dir torch --index-url "$TORCH_CPU_INDEX_URL"; \
+  fi
+
+# Install Python packages with retry mechanism (PIP_INDEX_URL 由 build arg 控制)
+ENV PIP_INDEX_URL=$PIP_INDEX_URL
 RUN pip install --no-cache-dir -r requirements.txt || \
   (echo "Retrying in 5 seconds..." && sleep 5 && pip install --no-cache-dir -r requirements.txt) || \
   (echo "Retrying in 10 seconds..." && sleep 10 && pip install --no-cache-dir -r requirements.txt)

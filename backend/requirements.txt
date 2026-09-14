@@ -27,3 +27,5 @@ langchain-ollama==0.2.3
 langchain-huggingface>=0.1.0
 sentence-transformers>=2.2.0
 docx2txt==0.8
+# 用于加密存储「模型设置」页面保存的第三方 API Key（app/core/crypto.py）
+cryptography>=42.0.0

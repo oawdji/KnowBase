@@ -27,8 +27,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+      # 本机 80 端口的大文件下载会被重置，https 源（清华 TUNA）稳定且快
+      args:
+        APT_MIRROR: mirrors.tuna.tsinghua.edu.cn
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        # 无 GPU 环境：装 CPU 版 torch，避免拉取数 GB 的 CUDA 依赖
+        TORCH_CPU_INDEX_URL: https://download.pytorch.org/whl/cpu
     ports:
-      - "8000:8000"
+      # 宿主机 8000 已被本机其它项目占用（codemind-backend），对外改用 8010。
+      # 容器内部仍是 8000，nginx 通过服务名 backend:8000 访问，前端不受影响。
+      - "8010:8000"
     env_file:
       - .env
     extra_hosts:
@@ -39,6 +47,8 @@ services:
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
+      # 持久化 HuggingFace 向量模型缓存，避免容器重建后重复下载
+      - hf_cache:/root/.cache/huggingface
     networks:
       - app_network
     depends_on:
@@ -91,7 +101,9 @@ services:
       - MYSQL_PASSWORD=ragwebui
       - TZ=Asia/Shanghai
     ports:
-      - "3306:3306"
+      # 宿主机已有本地 MySQL 占用 3306/33060，容器对外改用 3308。
+      # 后端通过 compose 网络内的 db:3306 连接，不受影响。
+      - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -107,7 +119,9 @@ services:
       - app_network
 
   minio:
-    image: minio/minio:latest
+    # MinIO 已从 Docker Hub 下架（minio/minio 拉取报 repository does not exist），
+    # 官方镜像现由 quay.io 提供。
+    image: quay.io/minio/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -124,6 +138,7 @@ volumes:
   mysql_data:
   chroma_data:
   minio_data:
+  hf_cache:
 
 networks:
   app_network:
