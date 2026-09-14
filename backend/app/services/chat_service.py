@@ -1,6 +1,7 @@
 import json
 import base64
-from typing import List, AsyncGenerator
+import asyncio
+from typing import List, AsyncGenerator, Optional, Tuple
 from sqlalchemy.orm import Session
 from langchain_openai import ChatOpenAI
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
@@ -8,7 +9,8 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
 from app.core.config import settings
-from app.models.chat import Message
+from app.db.session import SessionLocal
+from app.models.chat import Chat, Message
 from app.models.knowledge import KnowledgeBase, Document
 from langchain.globals import set_verbose, set_debug
 from app.services.vector_store import VectorStoreFactory
@@ -18,12 +20,150 @@ from app.services.llm.llm_factory import LLMFactory
 set_verbose(True)
 set_debug(True)
 
+# 对话标题相关
+PLACEHOLDER_TITLE = "新对话"  # 前端在 title 为 NULL 时显示的占位名
+MAX_TITLE_LENGTH = 255  # 与 chats.title 列宽一致
+TITLE_PROMPT = (
+    "请为下面这段用户提问起一个简洁的对话标题，作为会话列表中的名称。\n"
+    "要求：不超过 15 个字，与提问使用同一种语言，"
+    "只输出标题本身，不要引号、书名号、句号，也不要任何解释。\n\n"
+    "用户提问：{question}"
+)
+
+
+def _truncate_title(text: str, limit: int) -> str:
+    """把文本压成单行并截断，作为标题使用。"""
+    cleaned = " ".join((text or "").split())
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[:limit].rstrip() + "…"
+
+
+def _derive_title(query: str) -> str:
+    """兜底标题：直接截断用户的第一条提问。永远能成功，不依赖模型。"""
+    return _truncate_title(query, settings.CHAT_TITLE_MAX_LENGTH) or PLACEHOLDER_TITLE
+
+
+async def _generate_title_with_llm(query: str, llm_config) -> Optional[str]:
+    """调用对话模型生成更贴切的标题；任何失败都返回 None（保留兜底标题）。"""
+    try:
+        llm = LLMFactory.create(config=llm_config, temperature=0, streaming=False)
+        response = await asyncio.wait_for(
+            llm.ainvoke(TITLE_PROMPT.format(question=_truncate_title(query, 500))),
+            timeout=settings.CHAT_TITLE_LLM_TIMEOUT,
+        )
+        raw = getattr(response, "content", "") or ""
+        # 模型偶尔会带上引号或结尾标点，清掉
+        title = _truncate_title(str(raw), 20).strip("《》\"'“”‘’。，,、:：")
+        return title or None
+    except Exception as exc:  # 标题是锦上添花，失败不能影响对话
+        print(f"生成对话标题失败，保留截断标题：{exc}")
+        return None
+
+
+def _claim_auto_title(db: Session, chat_id: int, title: str) -> bool:
+    """把自动标题写入仍处于「未命名」状态的对话。
+
+    返回 False 表示对话已有标题（用户改过名或已自动命名），此时不覆盖。
+    """
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if chat is None or (chat.title or "").strip():
+        return False
+    chat.title = title[:MAX_TITLE_LENGTH]
+    db.commit()
+    return True
+
+
+async def _refine_title_in_background(
+    chat_id: int,
+    query: str,
+    llm_config,
+    fallback_title: str,
+) -> None:
+    """后台把兜底标题换成模型生成的标题。
+
+    使用独立数据库会话：请求会话在流结束后就被关闭了。
+    只有标题仍等于本次写入的兜底标题时才覆盖，避免盖掉用户手动改的名字。
+    """
+    db = SessionLocal()
+    try:
+        title = await _generate_title_with_llm(query, llm_config)
+        if not title or title == fallback_title:
+            return
+        chat = db.query(Chat).filter(Chat.id == chat_id).first()
+        if chat is None or (chat.title or "") != fallback_title:
+            return
+        chat.title = title[:MAX_TITLE_LENGTH]
+        db.commit()
+    except Exception as exc:
+        print(f"优化对话标题失败：{exc}")
+    finally:
+        db.close()
+
+
+async def _auto_name_chat(
+    db: Session,
+    chat_id: int,
+    query: str,
+    llm_config,
+) -> Optional[Tuple[str, bool]]:
+    """首条用户消息时自动给对话命名。
+
+    返回 (写入的标题, 是否已安排后台优化)；无需命名时返回 None。
+    """
+    current_title = db.query(Chat.title).filter(Chat.id == chat_id).scalar()
+    if (current_title or "").strip():
+        # 已经命名过（含用户手动改名）→ 不再自动命名
+        return None
+
+    user_message_count = (
+        db.query(Message)
+        .filter(Message.chat_id == chat_id, Message.role == "user")
+        .count()
+    )
+    if user_message_count != 1:
+        # 只有第一条用户消息触发自动命名（也兼容历史遗留的未命名对话）
+        return None
+
+    fallback_title = _derive_title(query)
+    if not _claim_auto_title(db, chat_id, fallback_title):
+        return None
+
+    refining = False
+    if settings.CHAT_TITLE_LLM and llm_config is not None:
+        asyncio.create_task(
+            _refine_title_in_background(chat_id, query, llm_config, fallback_title)
+        )
+        refining = True
+
+    return fallback_title, refining
+
+def _friendly_error_message(error: Exception) -> str:
+    """把模型/网络异常转成用户能看懂、且知道下一步做什么的中文提示。"""
+    raw = " ".join(str(error).split())
+    if len(raw) > 500:
+        raw = raw[:500] + "…"
+    lowered = raw.lower()
+    hint = "请到「模型设置」检查 API Key、接口地址与模型名称是否正确。"
+
+    if any(k in lowered for k in ("401", "authentication", "invalid_api_key", "incorrect api key", "unauthorized")):
+        return f"对话模型鉴权失败：{raw} {hint}"
+    if any(k in lowered for k in ("insufficient", "balance", "quota", "402")):
+        return f"对话模型额度不足：{raw} 请检查服务商账户余额。"
+    if "timeout" in lowered or "timed out" in lowered:
+        return f"对话模型请求超时：{raw} {hint}"
+    if "connect" in lowered or "connection" in lowered:
+        return f"无法连接对话模型服务：{raw} {hint}"
+    return f"对话模型调用失败：{raw} {hint}"
+
+
 async def generate_response(
     query: str,
     messages: dict,
     knowledge_base_ids: List[int],
     chat_id: int,
-    db: Session
+    db: Session,
+    llm_config=None
 ) -> AsyncGenerator[str, None]:
     try:
         # Create user message
@@ -34,6 +174,25 @@ async def generate_response(
         )
         db.add(user_message)
         db.commit()
+
+        # 首条消息 → 自动命名对话（用户已命名则跳过）。
+        # 标题帧在回答之前推给前端，标题栏可以立刻更新。
+        try:
+            auto_title = await _auto_name_chat(db, chat_id, query, llm_config)
+        except Exception as naming_error:
+            # 命名失败绝不能影响正常对话，回滚以免会话处于不可用状态
+            print(f"自动命名对话失败，跳过：{naming_error}")
+            db.rollback()
+            auto_title = None
+
+        if auto_title:
+            title, refining = auto_title
+            yield "2:{payload}\n".format(
+                payload=json.dumps(
+                    [{"type": "chat_title", "title": title, "refining": refining}],
+                    ensure_ascii=False,
+                )
+            )
         
         # Create bot message placeholder
         bot_message = Message(
@@ -79,8 +238,8 @@ async def generate_response(
         # Use first vector store for now
         retriever = vector_stores[0].as_retriever()
         
-        # Initialize the language model
-        llm = LLMFactory.create()
+        # Initialize the language model（优先使用「模型设置」里保存的配置）
+        llm = LLMFactory.create(config=llm_config)
         
         # Create contextualize question prompt
         contextualize_q_system_prompt = (
@@ -194,9 +353,13 @@ async def generate_response(
         db.commit()
             
     except Exception as e:
-        error_message = f"Error generating response: {str(e)}"
+        error_message = _friendly_error_message(e)
         print(error_message)
-        yield '3:{text}\n'.format(text=error_message)
+        # AI SDK 的 3: 帧内容必须是合法 JSON（字符串），否则前端解析整条流会抛
+        # SyntaxError，用户只能看到"流中断"而看不到这里的提示。必须用 json.dumps。
+        yield "3:{payload}\n".format(
+            payload=json.dumps(error_message, ensure_ascii=False)
+        )
         
         # Update bot message with error
         if 'bot_message' in locals():

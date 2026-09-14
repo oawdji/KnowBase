@@ -15,7 +15,9 @@ class Chat(Base, TimestampMixin):
     __tablename__ = "chats"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
+    # 可空：NULL 表示尚未命名（新建对话时不再要求用户填标题），
+    # 首条用户消息落库后自动命名，用户手动改名后不再被自动覆盖。
+    title = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # Relationships

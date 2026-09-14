@@ -2,6 +2,7 @@ import React, {
   FC,
   useMemo,
   useEffect,
+  useRef,
   useState,
   ClassAttributes,
 } from "react";
@@ -19,19 +20,27 @@ import rehypeHighlight from "rehype-highlight";
 import { api } from "@/lib/api";
 import { FileIcon } from "react-file-icon";
 
-// Debounce hook to prevent rapid state updates during streaming
-const useDebouncedValue = <T,>(value: T, delay: number): T => {
+// Debounce hook to prevent rapid state updates during streaming.
+// key 用于以「内容签名」而不是对象身份作为依赖：父组件每次重渲染都会传入新的
+// citations 数组，若以身份作依赖，定时器会被不断重置并持续触发 setState，
+// 父组件因此再重渲染，形成无限循环（Issue #69 的根因）。
+const useDebouncedValue = <T,>(value: T, delay: number, key?: string): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const latestValue = useRef(value);
+
+  useEffect(() => {
+    latestValue.current = value;
+  });
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedValue(value);
+      setDebouncedValue(latestValue.current);
     }, delay);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [value, delay]);
+  }, [key ?? value, delay]);
 
   return debouncedValue;
 };
@@ -56,6 +65,24 @@ interface CitationInfo {
   document: DocumentInfo;
 }
 
+// 比较两份引用信息是否等价：内容相同则跳过 setState（返回原对象），
+// 避免因为新对象身份而多触发一次渲染
+const isSameCitationInfo = (
+  prev: Record<string, CitationInfo>,
+  next: Record<string, CitationInfo>
+): boolean => {
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(next);
+  if (prevKeys.length !== nextKeys.length) return false;
+
+  return prevKeys.every(
+    (key) =>
+      next[key] !== undefined &&
+      prev[key]?.knowledge_base?.name === next[key]?.knowledge_base?.name &&
+      prev[key]?.document?.file_name === next[key]?.document?.file_name
+  );
+};
+
 export const Answer: FC<{
   markdown: string;
   citations?: Citation[];
@@ -64,8 +91,19 @@ export const Answer: FC<{
     Record<string, CitationInfo>
   >({});
 
+  // 引用内容的「签名」：只随内容变化，不随数组身份变化。
+  // 前半段是请求引用信息用的 ids，后半段（text 长度）用于感知文本变化。
+  const citationsKey = citations
+    .map(
+      (citation) =>
+        `${citation.metadata?.kb_id ?? ""}:${
+          citation.metadata?.document_id ?? ""
+        }:${citation.text?.length ?? 0}`
+    )
+    .join("|");
+
   // Debounce citations to prevent rapid API calls during streaming
-  const debouncedCitations = useDebouncedValue(citations, 300);
+  const debouncedCitations = useDebouncedValue(citations, 300, citationsKey);
 
   const processedMarkdown = useMemo(() => {
     return markdown
@@ -106,7 +144,9 @@ export const Answer: FC<{
         }
       }
 
-      setCitationInfoMap(infoMap);
+      setCitationInfoMap((prev) =>
+        isSameCitationInfo(prev, infoMap) ? prev : infoMap
+      );
     };
 
     if (debouncedCitations.length > 0) {
@@ -174,7 +214,7 @@ export const Answer: FC<{
                 <Divider />
                 {Object.keys(citation.metadata).length > 0 && (
                   <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                    <div className="font-medium mb-2">Debug Info:</div>
+                    <div className="font-medium mb-2">调试信息：</div>
                     <div className="space-y-1">
                       {Object.entries(citation.metadata).map(([key, value]) => (
                         <div key={key} className="flex">
