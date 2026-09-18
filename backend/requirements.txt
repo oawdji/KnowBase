@@ -16,6 +16,9 @@ mysql-connector-python>=8.0.33
 minio>=7.2.0
 python-docx>=0.8.11
 pypdf>=3.0.0
+# PyMuPDF：document_processor.py 用它解析 PDF（PyPDF 对部分中文 PDF 会出乱码）
+# 注意：langchain_community 的 PyMuPDFLoader 依赖的是 pymupdf 包（模块名 fitz）
+pymupdf>=1.24.0
 unstructured>=0.10.30
 markdown>=3.0.0
 unstructured[md]>=0.10.0

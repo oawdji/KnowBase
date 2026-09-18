@@ -9,7 +9,7 @@ from io import BytesIO
 from typing import Optional, List, Dict, Set
 from fastapi import UploadFile
 from langchain_community.document_loaders import (
-    PyPDFLoader,
+    PyMuPDFLoader,
     Docx2txtLoader,
     UnstructuredMarkdownLoader,
     TextLoader
@@ -199,7 +199,9 @@ async def preview_document(file_path: str, chunk_size: int = 1000, chunk_overlap
     try:
         # Select appropriate loader
         if ext == ".pdf":
-            loader = PyPDFLoader(temp_path)
+            # 用 PyMuPDF 而非 PyPDF：后者对部分中文 PDF 会解析出大量乱码字符
+            # （实测异常字符占比 18~23%），导致中文语义检索基本失效。
+            loader = PyMuPDFLoader(temp_path)
         elif ext == ".docx":
             loader = Docx2txtLoader(temp_path)
         elif ext == ".md":
@@ -285,7 +287,9 @@ async def process_document_background(
             logger.info(f"Task {task_id}: Loading document with extension {ext}")
             # 选择合适的加载器
             if ext == ".pdf":
-                loader = PyPDFLoader(local_temp_path)
+                # 与 preview_document 保持一致：PyMuPDF 能正确解析部分中文 PDF，
+                # PyPDF 会产生大量乱码；两处必须用同一个库，否则预览与实际入库不一致。
+                loader = PyMuPDFLoader(local_temp_path)
             elif ext == ".docx":
                 loader = Docx2txtLoader(local_temp_path)
             elif ext == ".md":
