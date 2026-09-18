@@ -44,9 +44,16 @@ services:
     environment:
       - DEBUG=1
       - PYTHONUNBUFFERED=1
+      # 向量模型已在 hf_cache 里缓存，而本机到 huggingface.co / hf-mirror.com 的连接会被重置
+      # （实测 TLS UNEXPECTED_EOF）。此时 huggingface 客户端仍会对每个文件重试 5 次，
+      # 导致每次冷启动白等 17~144 秒。设为离线后直接用本地缓存，冷启动降到约 2~4 秒。
+      # 注意：生产 docker-compose.yml 没有 hf_cache 卷，首次运行需要下载模型，因此那边不要加这一行。
+      - HF_HUB_OFFLINE=1
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
+      # 本地向量模型目录（由 ModelScope 下载，见 models/），以本地路径方式加载、无需联网
+      - ./models:/app/models
       # 持久化 HuggingFace 向量模型缓存，避免容器重建后重复下载
       - hf_cache:/root/.cache/huggingface
     networks:
