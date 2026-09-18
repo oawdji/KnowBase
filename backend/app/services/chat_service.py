@@ -1,6 +1,7 @@
 import json
 import base64
 import asyncio
+import logging
 from typing import List, AsyncGenerator, Optional, Tuple
 from sqlalchemy.orm import Session
 from langchain_openai import ChatOpenAI
@@ -12,13 +13,18 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.chat import Chat, Message
 from app.models.knowledge import KnowledgeBase, Document
-from langchain.globals import set_verbose, set_debug
 from app.services.vector_store import VectorStoreFactory
 from app.services.embedding.embedding_factory import EmbeddingsFactory
 from app.services.llm.llm_factory import LLMFactory
 
-set_verbose(True)
-set_debug(True)
+logger = logging.getLogger(__name__)
+
+# 注意：这里不要开启 LangChain 的全局 verbose/debug。
+# set_debug(True) 会往每个回调管理器挂一个 ConsoleCallbackHandler，
+# 而它内部是 BaseTracer(function=print) —— 直接 print 到 stdout，绕过 logging 配置
+# （logging.basicConfig(level=INFO) 拦不住）。实测一次 625 字回答、2010 字上下文
+# 会产生 21KB 同步 stdout 写入；真实模型逐 token 触发，且在事件循环线程里阻塞 I/O，
+# 会明显拖慢流式输出。
 
 # 对话标题相关
 PLACEHOLDER_TITLE = "新对话"  # 前端在 title 为 NULL 时显示的占位名
@@ -57,7 +63,7 @@ async def _generate_title_with_llm(query: str, llm_config) -> Optional[str]:
         title = _truncate_title(str(raw), 20).strip("《》\"'“”‘’。，,、:：")
         return title or None
     except Exception as exc:  # 标题是锦上添花，失败不能影响对话
-        print(f"生成对话标题失败，保留截断标题：{exc}")
+        logger.warning(f"生成对话标题失败，保留截断标题：{exc}")
         return None
 
 
@@ -96,7 +102,7 @@ async def _refine_title_in_background(
         chat.title = title[:MAX_TITLE_LENGTH]
         db.commit()
     except Exception as exc:
-        print(f"优化对话标题失败：{exc}")
+        logger.warning(f"优化对话标题失败：{exc}")
     finally:
         db.close()
 
@@ -181,7 +187,7 @@ async def generate_response(
             auto_title = await _auto_name_chat(db, chat_id, query, llm_config)
         except Exception as naming_error:
             # 命名失败绝不能影响正常对话，回滚以免会话处于不可用状态
-            print(f"自动命名对话失败，跳过：{naming_error}")
+            logger.warning(f"自动命名对话失败，跳过：{naming_error}")
             db.rollback()
             auto_title = None
 
@@ -224,7 +230,9 @@ async def generate_response(
                     collection_name=f"kb_{kb.id}",
                     embedding_function=embeddings,
                 )
-                print(f"Collection {f'kb_{kb.id}'} count:", vector_store._store._collection.count())
+                # count() 是一次额外的向量库往返，只在真的开 DEBUG 日志时才查
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Collection kb_{kb.id} count: {vector_store._store._collection.count()}")
                 vector_stores.append(vector_store)
         
         if not vector_stores:
@@ -354,7 +362,7 @@ async def generate_response(
             
     except Exception as e:
         error_message = _friendly_error_message(e)
-        print(error_message)
+        logger.error(error_message)
         # AI SDK 的 3: 帧内容必须是合法 JSON（字符串），否则前端解析整条流会抛
         # SyntaxError，用户只能看到"流中断"而看不到这里的提示。必须用 json.dumps。
         yield "3:{payload}\n".format(
