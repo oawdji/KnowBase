@@ -583,16 +583,26 @@ async def test_retrieval(
             embedding_function=embeddings,
         )
         
-        results = vector_store.similarity_search_with_score(request.query, k=request.top_k)
-        
+        results = vector_store.similarity_search_with_relevance(request.query, k=request.top_k)
+
+        # 统一按相关度降序，保证界面上的顺序和显示的百分比一致；
+        # 若向量库没实现相关度换算（similarity 全为 None），就保持向量库自己的排序。
+        if all(item["similarity"] is not None for item in results):
+            results.sort(key=lambda item: item["similarity"], reverse=True)
+
         response = []
-        for doc, score in results:
+        for item in results:
+            doc = item["document"]
             response.append({
                 "content": doc.page_content,
                 "metadata": doc.metadata,
-                "score": float(score)
+                # similarity：余弦相似度 [-1, 1]，越大越相关，前端直接当百分比展示；
+                # score：向量库原始得分（Chroma 为平方 L2 距离，越小越相关），
+                # 两个都留着，调参时可以对照原始数值。
+                "similarity": item["similarity"],
+                "score": item["score"],
             })
-            
+
         return {"results": response}
         
     except HTTPException:

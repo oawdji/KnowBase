@@ -160,29 +160,47 @@ export default function TestPage({ params }: { params: { id: string } }) {
                 搜索结果
               </h2>
               <div className="grid gap-6">
-                {results.map((result, index) => (
-                  <Card
-                    key={index}
-                    className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card/50 backdrop-blur-sm"
-                  >
-                    <CardContent className="p-8">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                          <span className="px-4 py-2 rounded-full bg-primary/10 text-primary font-medium">
-                            相关度：{(result.score * 100).toFixed(2)}%
-                          </span>
-                          <span className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Search className="h-4 w-4" />
-                            来源：{result.metadata.source}
-                          </span>
+                {results.map((result, index) => {
+                  // similarity 是后端算好的余弦相似度（越大越相关）。老版本这里直接拿
+                  // result.score * 100 当百分比展示，而 score 其实是向量库的「距离」
+                  // （越小越相关），于是出现过「相关度 130%」这种不可能的数字。
+                  const hasRelevance = typeof result.similarity === "number";
+                  // 余弦的取值范围是 [-1, 1]，负值表示「比随机还无关」，界面上统一按 0 展示
+                  const relevancePercent = hasRelevance
+                    ? Math.max(0, result.similarity) * 100
+                    : 0;
+
+                  return (
+                    <Card
+                      key={index}
+                      className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card/50 backdrop-blur-sm"
+                    >
+                      <CardContent className="p-8">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-4">
+                            <span className="px-4 py-2 rounded-full bg-primary/10 text-primary font-medium">
+                              {hasRelevance
+                                ? `相关度：${relevancePercent.toFixed(1)}%`
+                                : `原始得分：${Number(result.score).toFixed(4)}`}
+                            </span>
+                            {hasRelevance && (
+                              <span className="text-sm text-muted-foreground">
+                                距离 {Number(result.score).toFixed(3)}（越小越相关）
+                              </span>
+                            )}
+                            <span className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Search className="h-4 w-4" />
+                              来源：{result.metadata.source}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-lg leading-relaxed whitespace-pre-wrap prose prose-gray max-w-none">
-                        {result.content}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <p className="text-lg leading-relaxed whitespace-pre-wrap prose prose-gray max-w-none">
+                          {result.content}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
