@@ -438,11 +438,35 @@ async def process_kb_documents(
     
     return {"tasks": task_info}
 
+# 在途入库任务的强引用集合。
+# asyncio.create_task() 的返回值如果不留引用，事件循环只持弱引用，
+# 任务可能在执行途中被垃圾回收，文档就永久停在 processing。
+_INFLIGHT_TASKS: set = set()
+
+
+def _discard_inflight_task(task: "asyncio.Task") -> None:
+    """任务结束后解除引用；顺带取回异常，避免 asyncio 报 'exception was never retrieved'。"""
+    _INFLIGHT_TASKS.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error(f"文档入库任务异常退出：{exc!r}")
+
+
 async def add_processing_tasks_to_queue(task_data, kb_id, chunk_size: int = 600, chunk_overlap: int = 120):
-    """Helper function to add document processing tasks to the queue without blocking the main response."""
+    """把入库任务交给工作线程执行，避免阻塞事件循环。
+
+    process_document_background 内部全是同步阻塞调用（MinIO 下载、文档解析、
+    向量化、写库），没有 await 点。此前它是 async 函数却被 asyncio.create_task 丢进
+    事件循环，等于在事件循环线程里同步跑完整个入库流程：单 worker 下解析大文档期间，
+    聊天等所有请求一起排队。改用 asyncio.to_thread 后，入库在工作线程中进行，
+    事件循环可以继续处理其它请求。
+    """
     for data in task_data:
-        asyncio.create_task(
-            process_document_background(
+        task = asyncio.create_task(
+            asyncio.to_thread(
+                process_document_background,
                 data["temp_path"],
                 data["file_name"],
                 kb_id,
@@ -452,6 +476,8 @@ async def add_processing_tasks_to_queue(task_data, kb_id, chunk_size: int = 600,
                 chunk_overlap
             )
         )
+        _INFLIGHT_TASKS.add(task)
+        task.add_done_callback(_discard_inflight_task)
     logger.info(f"Added {len(task_data)} document processing tasks to queue")
 
 @router.post("/cleanup")

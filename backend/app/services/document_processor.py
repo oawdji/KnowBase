@@ -240,7 +240,7 @@ async def preview_document(file_path: str, chunk_size: int = DEFAULT_CHUNK_SIZE,
     finally:
         os.unlink(temp_path)
 
-async def process_document_background(
+def process_document_background(
     temp_path: str,
     file_name: str,
     kb_id: int,
@@ -249,7 +249,15 @@ async def process_document_background(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
 ) -> None:
-    """Process document in background"""
+    """Process document in background.
+
+    注意：这里刻意声明为同步函数（不是 async def）。
+    函数体内全是同步阻塞调用（MinIO 下载、文档解析、向量化、写库），没有任何 await，
+    所以它本来就不可能让出事件循环——写成 async 只会诱使调用方用 create_task 把它
+    丢进事件循环里同步执行，从而卡住整个进程。
+    正确用法是用 asyncio.to_thread() 把它放到工作线程执行（见 api_v1/knowledge_base.py）。
+    每个任务在这里自建 SessionLocal() 并在 finally 里关闭，线程内独立使用，不跨线程共享。
+    """
     logger = logging.getLogger(__name__)
     logger.info(f"Starting background processing for task {task_id}, file: {file_name}")
 
