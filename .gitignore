@@ -58,3 +58,5 @@ backend/static/
 backend/media/
 frontend/.env
 backend/.env
+# 本地向量模型（约 100MB，放在这里挂载进容器，不要提交）
+models/
