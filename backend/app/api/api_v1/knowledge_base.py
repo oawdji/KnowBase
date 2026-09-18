@@ -189,7 +189,11 @@ async def delete_knowledge_base(
         
         # 2. Clean up vector store
         try:
-            vector_store._store.delete_collection(f"kb_{kb_id}")
+            # 必须调用项目自己的封装（vector_store/ 的实现类）：
+            # _store 是 langchain 的 Chroma 对象，它的 delete_collection() 不接受参数，
+            # 传集合名会抛 "takes 1 positional argument but 2 were given"，
+            # 于是删库时集合实际上没被清理，Chroma 里会不断累积孤儿集合。
+            vector_store.delete_collection()
             logger.info(f"Cleaned up vector store for knowledge base {kb_id}")
         except Exception as e:
             cleanup_errors.append(f"Failed to clean up vector store: {str(e)}")
