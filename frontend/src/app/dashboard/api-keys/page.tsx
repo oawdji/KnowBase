@@ -118,9 +118,10 @@ export default function APIKeysPage() {
   // 删除 API Key
   const deleteAPIKey = async (id: number) => {
     try {
-      const response = await api.delete(`/api/api-keys/${id}`);
-
-      if (!response.ok) throw new Error("删除 API 密钥失败");
+      // api.delete 返回的是已经解析好的 JSON，不是 Response 对象；
+      // 非 2xx 的情况它内部已经抛出 ApiError 了，所以这里不能再判断 response.ok
+      // （那样 !undefined 恒为真，会导致删除成功也报「删除失败」）。
+      await api.delete(`/api/api-keys/${id}`);
 
       setApiKeys(apiKeys.filter((key) => key.id !== id));
       toast({
