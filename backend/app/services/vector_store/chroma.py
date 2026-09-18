@@ -1,4 +1,5 @@
 from typing import List, Any, Dict
+import threading
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
@@ -8,18 +9,33 @@ from app.core.config import settings
 
 from .base import BaseVectorStore
 
+# 进程内共享一个 HttpClient：每次新建都要多做 3 次元数据往返（身份 / 租户 / 库）
+_client = None
+_client_lock = threading.Lock()
+
+
+def _get_chroma_client():
+    """返回进程内共享的 Chroma HttpClient（首次创建，之后复用）。"""
+    global _client
+    if _client is not None:
+        return _client
+
+    with _client_lock:
+        if _client is None:
+            _client = chromadb.HttpClient(
+                host=settings.CHROMA_DB_HOST,
+                port=settings.CHROMA_DB_PORT,
+            )
+    return _client
+
+
 class ChromaVectorStore(BaseVectorStore):
     """Chroma vector store implementation"""
     
     def __init__(self, collection_name: str, embedding_function: Embeddings, **kwargs):
         """Initialize Chroma vector store"""
-        chroma_client = chromadb.HttpClient(
-            host=settings.CHROMA_DB_HOST,
-            port=settings.CHROMA_DB_PORT,
-        )
-        
         self._store = Chroma(
-            client=chroma_client,
+            client=_get_chroma_client(),
             collection_name=collection_name,
             embedding_function=embedding_function,
         )
