@@ -341,12 +341,23 @@ async def process_kb_documents(
     upload_results: List[dict],
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    # 分块参数由前端从预览一路传到这里。此前它只作用于预览、入库永远写死 1000/200，
+    # 造成「界面上填的分块大小对入库无效」。用查询参数而非改请求体结构：
+    # body 仍保持上传结果数组，其它调用方不受影响。
+    chunk_size: int = Query(600, ge=100, le=4000, description="分块字符数"),
+    chunk_overlap: int = Query(120, ge=0, le=1000, description="块间重叠字符数"),
 ):
     """
     Process multiple documents asynchronously.
     """
     start_time = time.time()
+
+    if chunk_overlap >= chunk_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"块间重叠（{chunk_overlap}）必须小于分块大小（{chunk_size}）",
+        )
     
     kb = db.query(KnowledgeBase).filter(
         KnowledgeBase.id == kb_id,
@@ -416,12 +427,14 @@ async def process_kb_documents(
     background_tasks.add_task(
         add_processing_tasks_to_queue,
         task_data,
-        kb_id
+        kb_id,
+        chunk_size,
+        chunk_overlap
     )
     
     return {"tasks": task_info}
 
-async def add_processing_tasks_to_queue(task_data, kb_id):
+async def add_processing_tasks_to_queue(task_data, kb_id, chunk_size: int = 600, chunk_overlap: int = 120):
     """Helper function to add document processing tasks to the queue without blocking the main response."""
     for data in task_data:
         asyncio.create_task(
@@ -430,7 +443,9 @@ async def add_processing_tasks_to_queue(task_data, kb_id):
                 data["file_name"],
                 kb_id,
                 data["task_id"],
-                None
+                None,
+                chunk_size,
+                chunk_overlap
             )
         )
     logger.info(f"Added {len(task_data)} document processing tasks to queue")

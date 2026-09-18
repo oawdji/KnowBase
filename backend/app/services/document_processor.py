@@ -39,6 +39,13 @@ class UploadResult(BaseModel):
     content_type: str
     file_hash: str
 
+
+# 默认分块参数。取值依据：向量模型 bge-small-zh-v1.5 的 max_seq_length = 512 token，
+# 中文约 1 字符 ≈ 1 token，故 600 字符仍留有余量；旧的 1000 字符会超限导致内容被静默截断
+# （实测一份 3265 字符的中文 PDF：1000/200 有 4/4 块超限、约 12% 内容不进向量；600/120 为 0 块超限）。
+DEFAULT_CHUNK_SIZE = 600
+DEFAULT_CHUNK_OVERLAP = 120
+
 class TextChunk(BaseModel):
     content: str
     metadata: Optional[Dict] = None
@@ -47,7 +54,7 @@ class PreviewResult(BaseModel):
     chunks: List[TextChunk]
     total_chunks: int
 
-async def process_document(file_path: str, file_name: str, kb_id: int, document_id: int, chunk_size: int = 1000, chunk_overlap: int = 200) -> None:
+async def process_document(file_path: str, file_name: str, kb_id: int, document_id: int, chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> None:
     """Process document and store in vector database with incremental updates"""
     logger = logging.getLogger(__name__)
     
@@ -180,7 +187,7 @@ async def upload_document(file: UploadFile, kb_id: int) -> UploadResult:
         file_hash=file_hash
     )
 
-async def preview_document(file_path: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> PreviewResult:
+async def preview_document(file_path: str, chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> PreviewResult:
     """Step 2: Generate preview chunks"""
     # Get file from MinIO
     minio_client = get_minio_client()
@@ -239,8 +246,8 @@ async def process_document_background(
     kb_id: int,
     task_id: int,
     db: Session = None,
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
 ) -> None:
     """Process document in background"""
     logger = logging.getLogger(__name__)

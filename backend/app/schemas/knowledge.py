@@ -81,5 +81,7 @@ class KnowledgeBaseResponse(KnowledgeBaseBase):
 
 class PreviewRequest(BaseModel):
     document_ids: List[int]
-    chunk_size: int = 1000
-    chunk_overlap: int = 200 
+    # 默认值需与入库路径（document_processor / process 接口）保持一致，
+    # 否则「预览看到的块」与「真正入库的块」会对不上。
+    chunk_size: int = 600
+    chunk_overlap: int = 120

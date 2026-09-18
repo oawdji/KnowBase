@@ -104,8 +104,10 @@ export function DocumentUploadSteps({
     [key: number]: TaskStatus;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [chunkSize, setChunkSize] = useState(1000);
-  const [chunkOverlap, setChunkOverlap] = useState(200);
+  // 默认值需与后端 DEFAULT_CHUNK_SIZE / PreviewRequest 保持一致。
+  // 600 字符是为了配合 512 token 上限的中文向量模型，避免内容被静默截断。
+  const [chunkSize, setChunkSize] = useState(600);
+  const [chunkOverlap, setChunkOverlap] = useState(120);
   const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -251,8 +253,11 @@ export function DocumentUploadSteps({
 
     setIsLoading(true);
     try {
+      // 分块参数必须以查询参数形式一并提交：此前只发给了预览接口，
+      // 入库永远用后端写死的默认值，界面上的分块大小形同虚设。
       const data = (await api.post(
-        `/api/knowledge-base/${knowledgeBaseId}/documents/process`,
+        `/api/knowledge-base/${knowledgeBaseId}/documents/process` +
+          `?chunk_size=${chunkSize}&chunk_overlap=${chunkOverlap}`,
         resultsToProcess
       )) as TaskResponse;
 
