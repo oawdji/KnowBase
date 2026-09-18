@@ -46,6 +46,11 @@ class UploadResult(BaseModel):
 DEFAULT_CHUNK_SIZE = 600
 DEFAULT_CHUNK_OVERLAP = 120
 
+# 落库前对失败原因截断。error_message 是 TEXT 列，而异常信息可能极长：
+# flush 失败时 SQLAlchemy 会把全部绑定参数带进异常消息（实测一份 174 块的文档
+# 抛出的 IntegrityError 消息接近 50KB），超长会再次导致写库失败。
+MAX_ERROR_MESSAGE_LENGTH = 2000
+
 class TextChunk(BaseModel):
     content: str
     metadata: Optional[Dict] = None
@@ -438,9 +443,34 @@ def process_document_background(
     except Exception as e:
         logger.error(f"Task {task_id}: Error processing document: {str(e)}")
         logger.error(f"Task {task_id}: Stack trace: {traceback.format_exc()}")
-        task.status = "failed"
-        task.error_message = str(e)
-        db.commit()
+
+        # 如果异常来自 commit/flush（唯一键冲突、字段超长、锁等待超时、连接断开等），
+        # Session 会进入「必须先 rollback 才能继续使用」的失效状态。
+        # 不先回滚就直接 commit，会抛 PendingRollbackError —— 于是这里的失败状态
+        # 根本没写进库，任务永久停在 processing，前端一直转圈。
+        error_message = str(e)[:MAX_ERROR_MESSAGE_LENGTH]
+        try:
+            db.rollback()
+            task.status = "failed"
+            task.error_message = error_message
+            db.commit()
+        except Exception as status_error:
+            # 原 Session 已经救不回来（例如连接已断）→ 换一个全新 Session 兜底，
+            # 保证「这次入库失败了」这件事一定可见。
+            logger.error(f"Task {task_id}: 记录失败状态时再次出错：{status_error!r}")
+            fallback_db = SessionLocal()
+            try:
+                fallback_db.query(ProcessingTask).filter(
+                    ProcessingTask.id == task_id
+                ).update({
+                    "status": "failed",
+                    "error_message": error_message,
+                })
+                fallback_db.commit()
+            except Exception as fallback_error:
+                logger.error(f"Task {task_id}: 兜底记录失败状态也失败：{fallback_error!r}")
+            finally:
+                fallback_db.close()
         
         # 清理临时文件
         try:
