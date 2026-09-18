@@ -443,6 +443,27 @@ async def process_kb_documents(
 # 任务可能在执行途中被垃圾回收，文档就永久停在 processing。
 _INFLIGHT_TASKS: set = set()
 
+# 同时在跑的入库任务数上限。
+# 向量化很吃内存：实测一次 embed_documents(174 块) 峰值多占约 600MB，
+# 不限并发时几个大文档同时入库就会把整个后端 OOM 掉（实测被 OOM killer 杀死）。
+MAX_CONCURRENT_INGEST = 2
+_INGEST_SEMAPHORE = asyncio.Semaphore(MAX_CONCURRENT_INGEST)
+
+
+async def _run_ingest_to_thread(data, kb_id, chunk_size: int, chunk_overlap: int):
+    """在信号量保护下把一个入库任务交给工作线程执行。"""
+    async with _INGEST_SEMAPHORE:
+        return await asyncio.to_thread(
+            process_document_background,
+            data["temp_path"],
+            data["file_name"],
+            kb_id,
+            data["task_id"],
+            None,
+            chunk_size,
+            chunk_overlap
+        )
+
 
 def _discard_inflight_task(task: "asyncio.Task") -> None:
     """任务结束后解除引用；顺带取回异常，避免 asyncio 报 'exception was never retrieved'。"""
@@ -461,20 +482,11 @@ async def add_processing_tasks_to_queue(task_data, kb_id, chunk_size: int = 600,
     向量化、写库），没有 await 点。此前它是 async 函数却被 asyncio.create_task 丢进
     事件循环，等于在事件循环线程里同步跑完整个入库流程：单 worker 下解析大文档期间，
     聊天等所有请求一起排队。改用 asyncio.to_thread 后，入库在工作线程中进行，
-    事件循环可以继续处理其它请求。
+    事件循环可以继续处理其它请求；并发数由 _INGEST_SEMAPHORE 限制以控制内存。
     """
     for data in task_data:
         task = asyncio.create_task(
-            asyncio.to_thread(
-                process_document_background,
-                data["temp_path"],
-                data["file_name"],
-                kb_id,
-                data["task_id"],
-                None,
-                chunk_size,
-                chunk_overlap
-            )
+            _run_ingest_to_thread(data, kb_id, chunk_size, chunk_overlap)
         )
         _INFLIGHT_TASKS.add(task)
         task.add_done_callback(_discard_inflight_task)
